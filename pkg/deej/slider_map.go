@@ -76,6 +76,13 @@ func (m *sliderMap) set(key int, value []string) {
 	m.m[key] = value
 }
 
+func (m *sliderMap) NumSliders() int {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	return len(m.m)
+}
+
 func (m *sliderMap) String() string {
 	m.lock.Lock()
 	defer m.lock.Unlock()

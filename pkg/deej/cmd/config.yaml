@@ -35,6 +35,6 @@ noise_reduction: default
 # or set to a specific port like "COM4" if you know which port your device is on
 # baud_rate should match your ESP32 firmware settings (standard is 115200)
 serial_connection_info:
-  com_port: "COM10"  # The OTHER port in the pair
+  com_port: "COM11"  # The OTHER port in the pair
   # or use "auto" to let deej find it
   baud_rate: 115200
