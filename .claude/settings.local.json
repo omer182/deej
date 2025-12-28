@@ -15,7 +15,10 @@
       "Bash(wc:*)",
       "Bash(cmd //c \"\"C:Program FilesGobingo.exe\" version\")",
       "Bash(powershell -Command \"$env:Path += '';C:\\\\Program Files\\\\Go\\\\bin''; go version\")",
-      "Bash(cmd //c \"dir c:\\\\Users\\\\rio18\\\\Documents\\\\Projects\\\\deej\\\\*.exe /s /b\")"
+      "Bash(cmd //c \"dir c:\\\\Users\\\\rio18\\\\Documents\\\\Projects\\\\deej\\\\*.exe /s /b\")",
+      "Bash(powershell:*)",
+      "Bash(go build:*)",
+      "Bash(timeout 10 ./deej.exe:*)"
     ]
   }
 }

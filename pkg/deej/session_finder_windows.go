@@ -3,6 +3,7 @@ package deej
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 	"unsafe"
@@ -55,6 +56,10 @@ func newSessionFinder(logger *zap.SugaredLogger) (SessionFinder, error) {
 
 func (sf *wcaSessionFinder) GetAllSessions() ([]Session, error) {
 	sessions := []Session{}
+
+	// Lock this goroutine to the current OS thread for COM operations
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 
 	// we must call this every time we're about to list devices, i think. could be wrong
 	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED); err != nil {

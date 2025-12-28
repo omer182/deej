@@ -203,9 +203,9 @@ def main():
     args = parser.parse_args()
 
     print(f"""
-╔════════════════════════════════════════════════════════════╗
-║         ESP32 Deej Simulator - Serial Bridge              ║
-╚════════════════════════════════════════════════════════════╝
+============================================================
+         ESP32 Deej Simulator - Serial Bridge
+============================================================
 
 This tool simulates an ESP32 controller over a serial port.
 

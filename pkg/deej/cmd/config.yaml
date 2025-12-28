@@ -7,7 +7,7 @@
 # windows only - you can use 'system' to control the "system sounds" volume
 # important: slider indexes start at 0, regardless of which analog pins you're using!
 slider_mapping:
-  0: "Speakers (Realtek(R) Audio)"
+  0: "Speakers (Realtek High Definition Audio)"
   1: "Headphones (HyperX Cloud III Wireless)"
   2:
     - cod.exe
@@ -20,7 +20,7 @@ mute_button_mapping:
   1: mic
 
 available_output_device:
-  0: "Speakers (Realtek(R) Audio)"
+  0: "Speakers (Realtek High Definition Audio)"
   1: "Headphones (HyperX Cloud III Wireless)"
 
 # set this to true if you want the controls inverted (i.e. top is 0%, bottom is 100%)

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jacobsa/go-serial/serial"
+	"go.bug.st/serial"
 	"go.uber.org/zap"
 
 	"github.com/tomerhh/deej/pkg/deej/util"
@@ -32,7 +32,7 @@ type SerialIO struct {
 	currentSliderPercentValues []float32
 
 	conn        io.ReadWriteCloser
-	connOptions serial.OpenOptions
+	connOptions *serial.Mode
 
 	stopChannel chan bool
 	connected   bool
@@ -83,13 +83,11 @@ func (sio *SerialIO) setupSerialConnection(comPort string, baudRate uint) {
 	sio.comPort = comPort
 	sio.baudRate = baudRate
 
-	sio.connOptions = serial.OpenOptions{
-		PortName:              sio.comPort,
-		BaudRate:              sio.baudRate,
-		DataBits:              8,
-		StopBits:              1,
-		MinimumReadSize:       0,
-		InterCharacterTimeout: 100,
+	sio.connOptions = &serial.Mode{
+		BaudRate: int(sio.baudRate),
+		DataBits: 8,
+		StopBits: serial.OneStopBit,
+		Parity:   serial.NoParity,
 	}
 
 	sio.logger.Debugw("Set up serial connection options", "comPort", comPort, "baudRate", baudRate)
@@ -222,16 +220,14 @@ func (sio *SerialIO) autoDetectPort() (string, error) {
 		sio.logger.Debugw("Trying port", "port", port)
 
 		// Try to open the port
-		testOptions := serial.OpenOptions{
-			PortName:              port,
-			BaudRate:              sio.baudRate,
-			DataBits:              8,
-			StopBits:              1,
-			MinimumReadSize:       0,
-			InterCharacterTimeout: 100,
+		testMode := &serial.Mode{
+			BaudRate: int(sio.baudRate),
+			DataBits: 8,
+			StopBits: serial.OneStopBit,
+			Parity:   serial.NoParity,
 		}
 
-		conn, err := serial.Open(testOptions)
+		conn, err := serial.Open(port, testMode)
 		if err != nil {
 			// Port doesn't exist or is in use
 			continue
@@ -263,7 +259,7 @@ func (sio *SerialIO) autoDetectPort() (string, error) {
 func (sio *SerialIO) connect() error {
 	sio.logger.Debugw("Attempting serial connection", "port", sio.comPort, "baud", sio.baudRate)
 
-	conn, err := serial.Open(sio.connOptions)
+	conn, err := serial.Open(sio.comPort, sio.connOptions)
 	if err != nil {
 		return fmt.Errorf("open serial port: %w", err)
 	}
