@@ -1,8 +1,10 @@
-name: Build
+name: Build and Release
 
 on:
   push:
     branches: [master]
+    tags:
+      - 'v*'
   pull_request:
     branches: [master]
   workflow_dispatch:
@@ -30,9 +32,82 @@ jobs:
         if: runner.os == 'Windows'
         run: pkg/deej/scripts/windows/build-${{ matrix.mode }}.bat
         shell: cmd
+
       - name: Archive Windows build
         if: matrix.mode == 'release'
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
           path: deej-release.exe
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          # Get the latest tag, or use v0.0.0 if no tags exist
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+          # Increment patch version
+          VERSION=$(echo $LATEST_TAG | sed 's/v//')
+          IFS='.' read -r -a VERSION_PARTS <<< "$VERSION"
+          MAJOR=${VERSION_PARTS[0]}
+          MINOR=${VERSION_PARTS[1]}
+          PATCH=${VERSION_PARTS[2]}
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-build
+          path: ./artifacts
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_tag.outputs.new_version }}
+          release_name: Release ${{ steps.get_tag.outputs.new_version }}
+          body: |
+            Automated release of deej with USB Serial support
+
+            ## Changes
+            - USB Serial communication (COM port based)
+            - Individual mute button events
+            - Optimistic UI updates
+            - Auto-mute based on slider position
+
+            ## Installation
+            1. Download `deej-release.exe`
+            2. Place it in a folder of your choice
+            3. Create a `config.yaml` file (see README)
+            4. Run `deej-release.exe`
+
+            See the [README](https://github.com/omer182/deej/blob/master/README.md) for full documentation.
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/deej-release.exe
+          asset_name: deej-release.exe
+          asset_content_type: application/octet-stream

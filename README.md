@@ -1,31 +1,33 @@
 This is a cloned fork of the Deej project (https://github.com/omriharel/deej); and specifically, iamjackg's fork that added UDP support (https://github.com/iamjackg/deej).
 
-The main significant changes in the fork, from the original Deej project:
-1. UDP support
-2. Support for mute buttons (ones that actually mutes, not just lowers the volume to 0)
+The main significant changes in this fork, from the original Deej project:
+1. **USB Serial communication** (migrated from UDP to USB Serial for improved reliability and latency)
+2. Support for mute buttons (ones that actually mute, not just lower the volume to 0)
 3. Support for output device toggle (i.e. toggle between sound devices)
-4. A quick and dirty python UI for testing, while developing the Go code
+4. Individual button event protocol (more efficient than array-based updates)
+5. Optimistic UI updates on ESP32 firmware (immediate LED feedback)
 
-# deej (with UDP support)
+# deej (with USB Serial support)
 
 ![deej](assets/deejudp-logo.png)
 
 deej is an **open-source hardware volume mixer** for Windows and Linux PCs. It lets you use real-life sliders (like a DJ!) to **seamlessly control the volumes of different apps** (such as your music player, the game you're playing and your voice chat session) without having to stop what you're doing.
 
-**This fork only supports receiving fader data via UDP.** This means that you can control deej with anything that can send UDP packets, including Wi-Fi enabled microcontrollers like the ESP8266 and ESP32, or scripts, or your home automation system, or anything you want!
+**This fork uses USB Serial communication** for direct connection between your ESP32-based hardware controller and your PC. This provides lower latency and more reliable communication compared to UDP/Wi-Fi solutions.
 
 For thorough documentation on the basics, please check out [the README of the original project](https://github.com/omriharel/deej).
 
-**[Download the latest release](https://github.com/ToMeRhh/deej/releases)**
+**[Download the latest release](https://github.com/omer182/deej/releases)**
 
 ## Configuration
 In `config.yaml` edit the following properties:
 
-### UDP Port
+### Serial Port
 
 ```yaml
-# settings for the UDP connection
-udp_port: 16990
+# settings for the serial connection
+com_port: COM5  # Adjust to match your ESP32's COM port
+baud_rate: 115200
 ```
 
 ### Sliders
@@ -79,41 +81,78 @@ Additionally:
 * important: slider indexes start at 0, regardless of which analog pins you're using!
 
 
-## The modified Deej protocol
-The deej protocol is very simple: each packet must consist of a command name, followed by a series of values separated by a `|`. No newline is necessary at the end of each packet.
+## The Serial Communication Protocol
 
-The available commands are:
-> Sliders
-> 
-> MuteButtons
-> 
-> SwitchOutput
+The deej serial protocol is simple and efficient: each message consists of a command name, followed by values separated by a `|` pipe character, terminated with a newline (`\n`). The backend responds with `OK\n` for successful operations.
 
-### Examples
+### Available Commands
+
 #### Sliders
-If you have 5 sliders, and the second and third one are currently at the midpoint, your packets would look like this:
+Sends all slider values in a single message. Values range from 0-4095 (12-bit ADC).
 
+**Format:** `Sliders|<value0>|<value1>|...|<valueN>\n`
+
+**Example:** If you have 5 sliders with varying positions:
 ```text
-Sliders|0|512|512|0|0
+Sliders|0|2048|4095|1024|0
 ```
-#### Mute buttons
-If you have 2 mute buttons, 2 are muted and the last one is not, the packet would look like this:
+The backend does not send a response for slider updates (fire-and-forget for performance).
 
+#### MuteButton (Individual)
+Sends a single mute button event. The backend responds with `OK\n` on success.
+
+**Format:** `MuteButton|<button_index>|<state>\n`
+- `button_index`: 0-based index of the mute button
+- `state`: `1` for muted, `0` for unmuted
+
+**Example:** To mute button 0:
 ```text
-MuteButtons|true|true|false
+MuteButton|0|1
 ```
-#### Toggle output device
-To choose the device at index 1 in the config, send the packet:
+**Response:** `OK\n`
 
+#### SwitchOutput
+Switches the active output device. The backend responds with `OK\n` on success.
+
+**Format:** `SwitchOutput|<device_index>\n`
+- `device_index`: 0-based index from `available_output_device` in config
+
+**Example:** To switch to device 1:
 ```text
 SwitchOutput|1
-```  
+```
+**Response:** `OK\n`
 
+### Protocol Benefits
+- **Individual events**: Only changed buttons send data (reduces serial traffic)
+- **Acknowledgment**: `OK` responses ensure critical operations succeeded
+- **Optimistic UI**: ESP32 updates LEDs immediately, backend confirms asynchronously
+- **Low latency**: USB Serial provides <10ms round-trip time
 
-### Building the controller
+### Building the Controller
 
-The basics are exactly the same as what is listed in the repo for the original project. The main difference is that the final string should be sent via UDP instead of through the serial port.
-See firmware that includes all these features [here](https://github.com/ToMeRhh/deej/tree/master/firmware/esp32-5-sliders-3-buttons)
+This fork includes complete ESP32 firmware with support for:
+- 5 analog sliders (12-bit ADC resolution)
+- 2 mute buttons with LED feedback
+- 1 output device selector with dual-LED indication
+- Auto-mute based on slider position (threshold: 400/4095)
+- Optimistic UI updates (LEDs respond instantly to button presses)
+
+See the firmware implementation [here](https://github.com/omer182/deej/tree/serial-migration/firmware/esp32-serial-first)
+
+**Hardware Requirements:**
+- ESP32 development board
+- 5x 10kΩ linear potentiometers
+- 3x momentary push buttons
+- 4x LEDs with appropriate resistors (220Ω recommended)
+- USB cable for serial communication
+
+**Flashing the Firmware:**
+1. Install [PlatformIO](https://platformio.org/)
+2. Open the `firmware/esp32-serial-first` folder in PlatformIO
+3. Connect your ESP32 via USB
+4. Run `pio run --target upload`
+5. The device will appear as a COM port (check Device Manager on Windows)
 ## License
 
 deej is released under the [MIT license](./LICENSE).
