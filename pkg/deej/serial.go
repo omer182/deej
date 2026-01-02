@@ -341,8 +341,8 @@ func (sio *SerialIO) handleLine(line string) {
 	switch command {
 	case "Sliders":
 		sio.handleSliders(data)
-	case "MuteButtons":
-		sio.handleMuteButtons(data)
+	case "MuteButton":
+		sio.handleMuteButton(data)
 	case "SwitchOutput":
 		sio.handleSwitchOutput(data)
 	case "GetCurrentOutputDevice":
@@ -426,56 +426,54 @@ func (sio *SerialIO) handleSliders(data []string) {
 }
 
 // handleMuteButtons processes mute button data and sends state back
-func (sio *SerialIO) handleMuteButtons(data []string) {
+// handleMuteButton processes a single mute button event
+func (sio *SerialIO) handleMuteButton(data []string) {
 	if sio.muteButtonsConsumer == nil {
 		sio.logger.Warn("No mute button consumer registered")
 		sio.sendResponse("ERROR")
 		return
 	}
 
-	events := []MuteButtonClickEvent{}
-
-	for buttonIdx, stringValue := range data {
-		muteState, err := strconv.ParseBool(stringValue)
-		if err != nil {
-			sio.logger.Warnw("Invalid mute button value", "value", stringValue, "error", err)
-			continue
-		}
-		events = append(events, MuteButtonClickEvent{
-			MuteButtonID: buttonIdx,
-			mute:         muteState,
-		})
-
-		if sio.deej.Verbose() {
-			sio.logger.Debugw("Mute button clicked", "event", events[len(events)-1])
-		}
-	}
-
-	if len(events) == 0 {
+	// Parse: MuteButton|index|state
+	if len(data) != 2 {
+		sio.logger.Warnw("Invalid mute button data", "data", data)
 		sio.sendResponse("ERROR")
 		return
 	}
 
-	// Call consumer to get actual state
-	newState, err := sio.muteButtonsConsumer(events)
+	buttonIdx, err := strconv.Atoi(data[0])
 	if err != nil {
-		sio.logger.Warnw("Error handling mute buttons", "error", err)
+		sio.logger.Warnw("Invalid button index", "value", data[0], "error", err)
 		sio.sendResponse("ERROR")
 		return
 	}
 
-	// Build response with actual mute states
-	responseParts := []string{"MuteState"}
-	for _, muted := range newState.MuteButtons {
-		if muted {
-			responseParts = append(responseParts, "true")
-		} else {
-			responseParts = append(responseParts, "false")
-		}
+	muteState, err := strconv.ParseBool(data[1])
+	if err != nil {
+		sio.logger.Warnw("Invalid mute state", "value", data[1], "error", err)
+		sio.sendResponse("ERROR")
+		return
 	}
 
-	response := strings.Join(responseParts, "|")
-	sio.sendResponse(response)
+	event := MuteButtonClickEvent{
+		MuteButtonID: buttonIdx,
+		mute:         muteState,
+	}
+
+	if sio.deej.Verbose() {
+		sio.logger.Debugw("Mute button event", "event", event)
+	}
+
+	// Call consumer with single event
+	_, err = sio.muteButtonsConsumer([]MuteButtonClickEvent{event})
+	if err != nil {
+		sio.logger.Warnw("Error handling mute button", "error", err)
+		sio.sendResponse("ERROR")
+		return
+	}
+
+	// Respond with OK (firmware already updated LEDs optimistically)
+	sio.sendResponse("OK")
 }
 
 // handleSwitchOutput processes output device switching
@@ -507,17 +505,16 @@ func (sio *SerialIO) handleSwitchOutput(data []string) {
 		sio.logger.Debugw("Output device switch requested", "deviceIdx", deviceIdx)
 	}
 
-	// Call consumer to get actual state
-	newState, err := sio.toggleOutputDeviceConsumer(event)
+	// Call consumer to switch device
+	_, err = sio.toggleOutputDeviceConsumer(event)
 	if err != nil {
 		sio.logger.Warnw("Error handling output device switch", "error", err)
 		sio.sendResponse("ERROR")
 		return
 	}
 
-	// Send response with actual device index
-	response := fmt.Sprintf("OutputDevice|%d", newState.selectedOutputDevice)
-	sio.sendResponse(response)
+	// Respond with OK (firmware already updated LEDs and state optimistically)
+	sio.sendResponse("OK")
 }
 
 // handleGetCurrentOutputDevice sends the current output device index

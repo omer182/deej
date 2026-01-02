@@ -212,6 +212,13 @@ func (s *masterSession) SetMute(mute bool) error {
 		return errRefreshSessions
 	}
 
+	// Check if already in desired mute state to avoid unnecessary API calls and errors
+	currentMute := s.GetMute()
+	if currentMute == mute {
+		s.logger.Debugw("Session already in desired mute state, skipping SetMute call", "mute", mute, "session", s.name)
+		return nil
+	}
+
 	if err := s.volume.SetMute(mute, s.eventCtx); err != nil {
 		s.logger.Warnw("Failed to set master session mute",
 			"error", err,
