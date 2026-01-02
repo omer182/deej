@@ -1,3 +1,15 @@
+# Release Workflow: Manual release creation
+# - Triggered manually from GitHub Actions UI
+# - Downloads pre-built exe from latest master CI build (no rebuild)
+# - Auto-increments version or uses custom version
+# - Creates Git tag and GitHub Release with exe attached
+#
+# How to use:
+#   1. Go to Actions -> Release -> Run workflow
+#   2. (Optional) Specify version (e.g., v1.2.3) or leave empty to auto-increment
+#   3. (Optional) Add custom release notes or use defaults
+#   4. Click "Run workflow"
+
 name: Release
 
 on:
@@ -57,9 +69,14 @@ jobs:
           check_artifacts: true
           search_artifacts: true
 
-      - name: Prepare release notes
-        id: release_notes
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          VERSION="${{ steps.get_version.outputs.new_version }}"
+
+          # Prepare release notes
           if [ -n "${{ github.event.inputs.release_notes }}" ]; then
             NOTES="${{ github.event.inputs.release_notes }}"
           else
@@ -79,28 +96,25 @@ jobs:
 
           See the [README](https://github.com/${{ github.repository }}/blob/master/README.md) for full documentation."
           fi
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.get_version.outputs.new_version }}
-          release_name: Release ${{ steps.get_version.outputs.new_version }}
-          body: ${{ steps.release_notes.outputs.notes }}
-          draft: false
-          prerelease: false
+          # Create release with gh CLI
+          gh release create "$VERSION" \
+            ./artifacts/deej-release.exe \
+            --title "Release $VERSION" \
+            --notes "$NOTES"
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/deej-release.exe
-          asset_name: deej-release.exe
-          asset_content_type: application/octet-stream
+          # Add job summary
+          echo "### 🎉 Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "**Release URL:** https://github.com/${{ github.repository }}/releases/tag/$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Assets" >> $GITHUB_STEP_SUMMARY
+          echo "- \`deej-release.exe\` - Ready for download" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📝 What happened" >> $GITHUB_STEP_SUMMARY
+          echo "1. ✅ Downloaded pre-built exe from latest master CI build" >> $GITHUB_STEP_SUMMARY
+          echo "2. ✅ Created Git tag: \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. ✅ Published GitHub Release with exe attached" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [View Release](https://github.com/${{ github.repository }}/releases/tag/$VERSION)" >> $GITHUB_STEP_SUMMARY

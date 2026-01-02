@@ -1,3 +1,10 @@
+# CI Workflow: Builds and tests on all branches and PRs
+# - Runs on every push to any branch
+# - Runs on PRs to master
+# - Builds both release and dev modes
+# - Saves release artifact from master builds (30-day retention)
+# - Blocks PR merges if build fails
+
 name: CI - Build and Test
 
 on:
@@ -36,4 +43,22 @@ jobs:
           name: windows-build-master
           path: deej-release.exe
           retention-days: 30
+
+      - name: Job Summary
+        if: matrix.mode == 'release'
+        run: |
+          echo "### ✅ Build Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Mode:** ${{ matrix.mode }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Go Version:** 1.23.3" >> $GITHUB_STEP_SUMMARY
+          echo "**Output:** deej-${{ matrix.mode }}.exe" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.ref }}" == "refs/heads/master" ]; then
+            echo "📦 **Artifact saved:** \`windows-build-master\` (30-day retention)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🚀 **Ready for release!** Go to Actions → Release workflow to create a new release." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ Branch build completed. Artifacts are only saved from master branch." >> $GITHUB_STEP_SUMMARY
+          fi
+        shell: bash
 
