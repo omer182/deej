@@ -5,6 +5,7 @@ package deej
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -19,11 +20,14 @@ const (
 
 // Deej is the main entity managing access to all sub-components
 type Deej struct {
-	logger                   *zap.SugaredLogger
-	notifier                 Notifier
-	config                   *CanonicalConfig
-	deejComponentsController DeejComponentsController
-	sessions                 *sessionMap
+	logger                *zap.SugaredLogger
+	notifier              Notifier
+	config                *CanonicalConfig
+	deejSlidersController DeejSlidersController
+	deejButtonsController DeejButtonsController
+	sessions              *sessionMap
+
+	restartSessionsTicker time.Ticker
 
 	stopChannel chan bool
 	version     string
@@ -47,11 +51,12 @@ func NewDeej(logger *zap.SugaredLogger, verbose bool) (*Deej, error) {
 	}
 
 	d := &Deej{
-		logger:      logger,
-		notifier:    notifier,
-		config:      config,
-		stopChannel: make(chan bool),
-		verbose:     verbose,
+		logger:                logger,
+		notifier:              notifier,
+		config:                config,
+		stopChannel:           make(chan bool),
+		restartSessionsTicker: *time.NewTicker(2 * time.Hour),
+		verbose:               verbose,
 	}
 
 	sessionFinder, err := newSessionFinder(logger)
@@ -83,14 +88,17 @@ func (d *Deej) Initialize() error {
 		return fmt.Errorf("load config during init: %w", err)
 	}
 
-	udp, err := NewUdpIO(d, d.logger)
+	// Create SerialIO instance that implements both slider and button controller interfaces
+	serialIO, err := NewSerialIO(d, d.logger)
 	if err != nil {
-		d.logger.Errorw("Failed to create UdpIO", "error", err)
-		return fmt.Errorf("create new UdpIO: %w", err)
+		d.logger.Errorw("Failed to create SerialIO", "error", err)
+		return fmt.Errorf("create new SerialIO: %w", err)
 	}
 
-	d.deejComponentsController = udp
-	d.logger.Info("Created UDP SliderController")
+	// Assign SerialIO to both controllers (same instance serves both interfaces)
+	d.deejSlidersController = serialIO
+	d.deejButtonsController = serialIO
+	d.logger.Info("Created SerialIO controller")
 
 	// initialize the session map
 	if err := d.sessions.initialize(); err != nil {
@@ -141,12 +149,23 @@ func (d *Deej) run() {
 	// watch the config file for changes
 	go d.config.WatchConfigFileChanges()
 
-	// connect to the arduino for the first time
+	// Setup a monitor to refresh the session map every hour.
+	// This solves bugs around stale sessions when the program runs for a long time.
 	go func() {
-		if err := d.deejComponentsController.Start(); err != nil {
-			d.logger.Warnw("Failed to start first-time slider connection", "error", err)
-			d.notifier.Notify(fmt.Sprintf("Could not start UDP listener on port %d!", d.config.UdpConnectionInfo.UdpPort),
-				"This UDP port is busy, make sure to close any slider monitor or other deej instance.")
+		for range d.restartSessionsTicker.C {
+			d.logger.Debug("Refreshing session map")
+			d.sessions.refreshSessions(true)
+		}
+	}()
+
+	// connect to the serial port for the first time
+	// Note: Since both controllers are the same SerialIO instance,
+	// we only need to call Start() once
+	go func() {
+		if err := d.deejSlidersController.Start(); err != nil {
+			d.logger.Warnw("Failed to start serial connection", "error", err)
+			// Note: SerialIO already sends notifications on connection failure,
+			// so we just signal stop here
 			d.signalStop()
 		}
 	}()
@@ -173,7 +192,9 @@ func (d *Deej) stop() error {
 	d.logger.Info("Stopping")
 
 	d.config.StopWatchingConfigFile()
-	d.deejComponentsController.Stop()
+
+	// Only call Stop() once since both controllers are the same instance
+	d.deejSlidersController.Stop()
 
 	// release the session map
 	if err := d.sessions.release(); err != nil {

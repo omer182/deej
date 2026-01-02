@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash:*)",
+      "Bash(curl:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(go test:*)",
+      "Bash(where go:*)",
+      "Bash(\"C:\\\\Program Files\\\\Go\\\\bin\\\\go.exe\" version)",
+      "Bash(powershell -Command \"Get-Command go -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Definition\")",
+      "Bash(cmd //c \"where go\")",
+      "Bash(test:*)",
+      "Bash(wc:*)",
+      "Bash(cmd //c \"\"C:Program FilesGobingo.exe\" version\")",
+      "Bash(powershell -Command \"$env:Path += '';C:\\\\Program Files\\\\Go\\\\bin''; go version\")",
+      "Bash(cmd //c \"dir c:\\\\Users\\\\rio18\\\\Documents\\\\Projects\\\\deej\\\\*.exe /s /b\")",
+      "Bash(powershell:*)",
+      "Bash(go build:*)",
+      "Bash(timeout 10 ./deej.exe:*)",
+      "Bash(pio run:*)",
+      "Bash(dir \"c:\\\\Users\\\\rio18\\\\Documents\\\\Projects\\\\deej\\\\agent-os\\\\specs\" /b /ad /o-d)",
+      "Bash(mkdir:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

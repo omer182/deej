@@ -81,7 +81,7 @@ func newWCASession(
 
 	// use a self-identifying session name e.g. deej.sessions.chrome
 	s.logger = logger.Named(strings.TrimSuffix(s.Key(), ".exe"))
-	s.logger.Debugw(sessionCreationLogMessage, "session", s)
+	// s.logger.Debugw(sessionCreationLogMessage, "session", s)
 
 	return s, nil
 }
@@ -103,8 +103,6 @@ func newMasterSession(
 	s.master = true
 	s.name = key
 	s.humanReadableDesc = key
-
-	s.logger.Debugw(sessionCreationLogMessage, "session", s)
 
 	return s, nil
 }
@@ -212,6 +210,13 @@ func (s *masterSession) SetMute(mute bool) error {
 	if s.stale {
 		s.logger.Warnw("Session expired because default device has changed, triggering session refresh")
 		return errRefreshSessions
+	}
+
+	// Check if already in desired mute state to avoid unnecessary API calls and errors
+	currentMute := s.GetMute()
+	if currentMute == mute {
+		s.logger.Debugw("Session already in desired mute state, skipping SetMute call", "mute", mute, "session", s.name)
+		return nil
 	}
 
 	if err := s.volume.SetMute(mute, s.eventCtx); err != nil {

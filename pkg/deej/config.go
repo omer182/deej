@@ -20,8 +20,9 @@ type CanonicalConfig struct {
 	MuteButtonMapping            *sliderMap
 	AvailableOutputDeviceMapping *sliderMap
 
-	UdpConnectionInfo struct {
-		UdpPort int
+	SerialConnectionInfo struct {
+		COMPort  string
+		BaudRate uint
 	}
 
 	InvertSliders bool
@@ -54,9 +55,10 @@ const (
 	configKeyAvailableOutputDeviceMapping = "available_output_device"
 	configKeyInvertSliders                = "invert_sliders"
 	configKeyNoiseReductionLevel          = "noise_reduction"
-	configKeyUdpPort                      = "udp_port"
+	configKeySerialPort                   = "serial_connection_info.com_port"
+	configKeyBaudRate                     = "serial_connection_info.baud_rate"
 
-	defaultUdpPort = 16990
+	defaultBaudRate = 115200
 )
 
 // has to be defined as a non-constant because we're using path.Join
@@ -84,7 +86,8 @@ func NewConfig(logger *zap.SugaredLogger, notifier Notifier) (*CanonicalConfig, 
 	userConfig.SetDefault(configKeyAvailableOutputDeviceMapping, map[string][]string{})
 	userConfig.SetDefault(configKeyInvertSliders, false)
 
-	userConfig.SetDefault(configKeyUdpPort, defaultUdpPort)
+	userConfig.SetDefault(configKeySerialPort, "auto")
+	userConfig.SetDefault(configKeyBaudRate, 115200)
 
 	internalConfig := viper.New()
 	internalConfig.SetConfigName(internalConfigName)
@@ -143,7 +146,7 @@ func (cc *CanonicalConfig) Load() error {
 		"sliderMapping", cc.SliderMapping,
 		"muteButtonMapping", cc.MuteButtonMapping,
 		"availableOutputDeviceMapping", cc.AvailableOutputDeviceMapping,
-		"udpConnectionInfo", cc.UdpConnectionInfo,
+		"serialConnectionInfo", cc.SerialConnectionInfo,
 		"invertSliders", cc.InvertSliders)
 
 	return nil
@@ -233,15 +236,8 @@ func (cc *CanonicalConfig) populateFromVipers() error {
 
 	// get the rest of the config fields - viper saves us a lot of effort here
 
-	cc.UdpConnectionInfo.UdpPort = cc.userConfig.GetInt(configKeyUdpPort)
-	if (cc.UdpConnectionInfo.UdpPort <= 0) || (cc.UdpConnectionInfo.UdpPort >= 65536) {
-		cc.logger.Warnw("Invalid UDP port specified, using default value",
-			"key", configKeyUdpPort,
-			"invalidValue", cc.UdpConnectionInfo.UdpPort,
-			"defaultValue", defaultUdpPort)
-
-		cc.UdpConnectionInfo.UdpPort = defaultUdpPort
-	}
+	cc.SerialConnectionInfo.COMPort = cc.userConfig.GetString(configKeySerialPort)
+	cc.SerialConnectionInfo.BaudRate = cc.userConfig.GetUint(configKeyBaudRate)
 
 	cc.InvertSliders = cc.userConfig.GetBool(configKeyInvertSliders)
 	cc.NoiseReductionLevel = cc.userConfig.GetString(configKeyNoiseReductionLevel)

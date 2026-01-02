@@ -3,6 +3,7 @@ package deej
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 	"unsafe"
@@ -55,6 +56,10 @@ func newSessionFinder(logger *zap.SugaredLogger) (SessionFinder, error) {
 
 func (sf *wcaSessionFinder) GetAllSessions() ([]Session, error) {
 	sessions := []Session{}
+
+	// Lock this goroutine to the current OS thread for COM operations
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 
 	// we must call this every time we're about to list devices, i think. could be wrong
 	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED); err != nil {
@@ -198,21 +203,17 @@ func (sf *wcaSessionFinder) getDefaultAudioEndpoints() (*wca.IMMDevice, *wca.IMM
 }
 
 func (sf *wcaSessionFinder) registerDefaultDeviceChangeCallback() error {
+	// fill the VTable with noops, except for OnDefaultDeviceChanged. that one's gold
 	sf.mmNotificationClient = wca.NewIMMNotificationClient(wca.IMMNotificationClientCallback{
 		OnDefaultDeviceChanged: sf.defaultDeviceChangedCallback,
+		// QueryInterface:         sf.noopCallback,
+		// AddRef:                 sf.noopCallback,
+		// Release:                sf.noopCallback,
+		OnDeviceStateChanged:   nil,
+		OnDeviceAdded:          nil,
+		OnDeviceRemoved:        nil,
+		OnPropertyValueChanged: nil,
 	})
-	// sf.mmNotificationClient.vTable = &wca.IMMNotificationClientVtbl{}
-
-	// fill the VTable with noops, except for OnDefaultDeviceChanged. that one's gold
-	// sf.mmNotificationClient.vTable.QueryInterface = syscall.NewCallback(sf.noopCallback)
-	// sf.mmNotificationClient.vTable.AddRef = syscall.NewCallback(sf.noopCallback)
-	// sf.mmNotificationClient.vTable.Release = syscall.NewCallback(sf.noopCallback)
-	// sf.mmNotificationClient.vTable.OnDeviceStateChanged = syscall.NewCallback(sf.noopCallback)
-	// sf.mmNotificationClient.vTable.OnDeviceAdded = syscall.NewCallback(sf.noopCallback)
-	// sf.mmNotificationClient.vTable.OnDeviceRemoved = syscall.NewCallback(sf.noopCallback)
-	// sf.mmNotificationClient.vTable.OnPropertyValueChanged = syscall.NewCallback(sf.noopCallback)
-
-	// sf.mmNotificationClient.vTable.OnDefaultDeviceChanged = syscall.NewCallback(sf.defaultDeviceChangedCallback)
 
 	if err := sf.mmDeviceEnumerator.RegisterEndpointNotificationCallback(sf.mmNotificationClient); err != nil {
 		sf.logger.Warnw("Failed to call RegisterEndpointNotificationCallback", "error", err)
@@ -544,6 +545,7 @@ func (sf *wcaSessionFinder) defaultDeviceChangedCallback(flow wca.EDataFlow, rol
 
 	return nil
 }
+
 func (sf *wcaSessionFinder) noopCallback() (hResult uintptr) {
 	return
 }
