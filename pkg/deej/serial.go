@@ -133,13 +133,20 @@ func (sio *SerialIO) Start() error {
 // Stop signals the serial connection to stop and closes the port
 func (sio *SerialIO) Stop() {
 	sio.logger.Debug("Stopping serial i/o")
-	sio.stopChannel <- true
 
+	// Close connection FIRST to unblock ReadString in readLoop
 	if sio.conn != nil {
 		sio.conn.Close()
 	}
 
 	sio.connected = false
+
+	// Then signal stop (non-blocking send in case channel is full)
+	select {
+	case sio.stopChannel <- true:
+	default:
+		sio.logger.Debug("Stop channel already signaled")
+	}
 }
 
 // SubscribeToSliderMoveEvents returns an unbuffered channel that receives
@@ -270,6 +277,9 @@ func (sio *SerialIO) connect() error {
 
 	sio.logger.Infow("Connected to serial port", "port", sio.comPort)
 
+	// Send "Connected" message to trigger LED indication on firmware
+	sio.sendResponse("Connected")
+
 	return nil
 }
 
@@ -288,6 +298,15 @@ func (sio *SerialIO) readLoop() {
 			line, err := reader.ReadString('\n')
 
 			if err != nil {
+				// Check if we're stopping (connection closed intentionally)
+				select {
+				case <-sio.stopChannel:
+					sio.logger.Debug("Stopped read loop (connection closed)")
+					return
+				default:
+					// Not stopping - handle the error
+				}
+
 				if err == io.EOF {
 					sio.logger.Warn("Serial connection closed, attempting reconnect...")
 				} else {

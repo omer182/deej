@@ -65,7 +65,6 @@ void setup() {
 
   // Visually indicate that the system is ready.
   util::sequentialLEDOn(MUTE_BUTTON_0_LED_PIN, MUTE_BUTTON_1_LED_PIN,
-                        AUDIO_DEVICE_SELECTOR_BUTTON_DEV_0_LED_PIN,
                         AUDIO_DEVICE_SELECTOR_BUTTON_DEV_1_LED_PIN, 300);
 
   // Initialize state and sync with backend
@@ -102,6 +101,23 @@ void loop() {
   static bool previous_auto_mute_state[2] = {false, false};  // Track previous mute state for sliders 0 and 1
   const int SLIDER_CHANGE_THRESHOLD = 50;  // Only send after 50+ units change
   const int MUTE_THRESHOLD = 400;  // Below this value = muted
+
+  // PRIORITY 0: Check for unsolicited messages from backend (e.g., "Connected")
+  // NOTE: This consumes the message from the serial buffer. In the current design,
+  // "Connected" is the only unsolicited message and is sent right at startup before
+  // any request/response exchanges happen, so there's no conflict with SerialApi.
+  // If we add more unsolicited messages in the future, we'll need a message router.
+  if (Serial.available()) {
+    String incoming = Serial.readStringUntil('\n');
+    incoming.trim();
+
+    if (incoming == "Connected") {
+      // Backend just connected - show visual indication
+      util::sequentialLEDOn(MUTE_BUTTON_0_LED_PIN, MUTE_BUTTON_1_LED_PIN,
+                            AUDIO_DEVICE_SELECTOR_BUTTON_DEV_1_LED_PIN, 300);
+    }
+    // Ignore unknown messages (could be noise or future protocol extensions)
+  }
 
   // PRIORITY 1: Check mute buttons FIRST (most critical for user responsiveness)
   // Track which buttons changed and their new states
