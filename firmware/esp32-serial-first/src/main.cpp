@@ -218,6 +218,48 @@ void loop() {
     // Device already switched locally in getValue(), just notify backend
     serial_api->sendSwitchOutput(new_device);
     // No need to call setActiveDevice again - already done in getValue()
+
+    // Check if the newly active device's slider is below mute threshold
+    // If so, send mute command to align Windows state with slider position
+    if (new_device < sliders->size()) {
+      auto [changed, value] = sliders->at(new_device)->getValue();
+      if (value < MUTE_THRESHOLD) {
+        // Find the mute button that controls this device
+        if (sliders->at(new_device)->hasMuteButton()) {
+          auto mute_btn = sliders->at(new_device)->getMuteButton();
+          if (mute_btn.has_value() && mute_btn->session == new_device) {
+            // Find the button index
+            for (int j = 0; j < mute_buttons->size(); j++) {
+              if (mute_buttons->at(j) == mute_btn->button) {
+                bool success = serial_api->sendMuteButton(j, true);
+                if (success) {
+                  mute_buttons->at(j)->setActiveSessionMuteState(true);
+                  previous_auto_mute_state[new_device] = true;
+                }
+                break;
+              }
+            }
+          }
+        }
+      } else {
+        // Slider above threshold, ensure unmuted
+        if (sliders->at(new_device)->hasMuteButton()) {
+          auto mute_btn = sliders->at(new_device)->getMuteButton();
+          if (mute_btn.has_value() && mute_btn->session == new_device) {
+            for (int j = 0; j < mute_buttons->size(); j++) {
+              if (mute_buttons->at(j) == mute_btn->button) {
+                bool success = serial_api->sendMuteButton(j, false);
+                if (success) {
+                  mute_buttons->at(j)->setActiveSessionMuteState(false);
+                  previous_auto_mute_state[new_device] = false;
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   // 3. Send slider changes only when significant (lower priority, reduced spam)
