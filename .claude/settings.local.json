@@ -18,7 +18,11 @@
       "Bash(cmd //c \"dir c:\\\\Users\\\\rio18\\\\Documents\\\\Projects\\\\deej\\\\*.exe /s /b\")",
       "Bash(powershell:*)",
       "Bash(go build:*)",
-      "Bash(timeout 10 ./deej.exe:*)"
+      "Bash(timeout 10 ./deej.exe:*)",
+      "Bash(pio run:*)",
+      "Bash(dir \"c:\\\\Users\\\\rio18\\\\Documents\\\\Projects\\\\deej\\\\agent-os\\\\specs\" /b /ad /o-d)",
+      "Bash(mkdir:*)",
+      "Bash(git add:*)"
     ]
   }
 }

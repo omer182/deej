@@ -7,20 +7,18 @@
 # windows only - you can use 'system' to control the "system sounds" volume
 # important: slider indexes start at 0, regardless of which analog pins you're using!
 slider_mapping:
-  0: "Speakers (Realtek(R) Audio)"
+  0: "Speakers (Realtek High Definition Audio)"
   1: "Headphones (HyperX Cloud III Wireless)"
-  2:
-    - cod.exe
-    - cs2.exe
-  3: spotify.exe
-  4: deej.unmapped
+  2: deej.unmapped
+  3: discord.exe
+  4: spotify.exe
 
 mute_button_mapping:
   0: master
   1: mic
 
 available_output_device:
-  0: "Speakers (Realtek(R) Audio)"
+  0: "Speakers (Realtek High Definition Audio)"
   1: "Headphones (HyperX Cloud III Wireless)"
 
 # set this to true if you want the controls inverted (i.e. top is 0%, bottom is 100%)
@@ -35,6 +33,6 @@ noise_reduction: default
 # or set to a specific port like "COM4" if you know which port your device is on
 # baud_rate should match your ESP32 firmware settings (standard is 115200)
 serial_connection_info:
-  com_port: "COM10"  # The OTHER port in the pair
+  com_port: "COM5"  # ESP32 serial port
   # or use "auto" to let deej find it
   baud_rate: 115200

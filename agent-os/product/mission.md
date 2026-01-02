@@ -1,56 +1,88 @@
 # Product Mission
 
 ## Pitch
-deej is an **open-source hardware volume mixer** that helps content creators, gamers, and streamers gain precise, wphysical control over PC audio by providing real-time volume adjustment for individual applications and audio devices through tactile sliders and buttons.
+deej is a **serial-first hardware volume mixer** that helps streamers, gamers, and power users achieve instant, tactile control over Windows audio by providing physical sliders and buttons connected via USB that control individual application volumes, mute states, and output device switching.
 
 ## Users
 
 ### Primary Customers
-- **Content Creators & Streamers**: Individuals who need quick, precise audio control during live streaming or recording sessions
-- **Gamers**: PC gamers who want to balance game audio, voice chat, and music without alt-tabbing
-- **DIY PC Enthusiasts**: Tech-savvy users who enjoy building custom hardware solutions for their setups
+- **Streamers & Content Creators**: Need split-second audio control during live streams without interrupting their workflow
+- **Gamers**: Want to balance game audio, Discord, and music without alt-tabbing or breaking immersion
+- **Audio Enthusiasts**: Prefer tactile hardware controls over software interfaces for precision audio management
 
 ### User Personas
 
-**Solo Streamer/Gamer** (20-35)
-- **Role:** Content creator managing personal gaming/streaming setup
-- **Context:** Uses multiple audio sources simultaneously (game, Discord, music, browser) while creating content or gaming
-- **Pain Points:** Software volume mixers require switching windows, breaking immersion and workflow. Network-based solutions add unnecessary complexity when the controller is physically connected via USB.
-- **Goals:** Instant, tactile audio control without leaving the current application. Simple, reliable USB connection without network configuration overhead.
+**Live Streamer** (22-32)
+- **Role:** Content creator managing complex audio setup while streaming
+- **Context:** Simultaneously running game audio, Discord voice chat, music, browser alerts, and streaming software - each needs independent volume control
+- **Pain Points:** Windows volume mixer requires multiple clicks and window switching. Adjusting Discord during intense gameplay breaks focus. Network-based solutions add unnecessary WiFi configuration when hardware is already USB-connected for power.
+- **Goals:** Instant physical control over every audio source. Visual confirmation of mute states (critical for mic muting). One-button switching between headphones (for gaming) and speakers (for editing).
+
+**Competitive Gamer** (18-28)
+- **Role:** PC gamer optimizing for competitive advantage
+- **Context:** Needs to quickly adjust voice comms volume relative to game sounds during matches without losing focus
+- **Pain Points:** Opening volume mixer during gameplay causes deaths. Can't quickly mute mic between rounds. Switching from headset to speakers after gaming session requires navigating Windows settings.
+- **Goals:** Zero-latency volume adjustments during gameplay. Physical mute button for instant mic control. Reliable USB connection that doesn't drop during critical moments.
 
 ## The Problem
 
-### Audio Control Interrupts Workflow
-Adjusting application volumes on Windows requires opening the volume mixer, finding the right app, and using a mouse - an interruption that breaks immersion during gaming or focus during content creation. For users running multiple audio sources, this becomes a constant distraction.
+### Audio Control Breaks Flow State
+Windows volume mixer requires opening a separate interface, searching for the application, and making adjustments with a mouse - a workflow that completely breaks immersion during gaming or focus during content creation. For users managing 5+ simultaneous audio sources (game, Discord, Spotify, OBS, browser), this becomes a constant source of frustration.
 
-**Our Solution:** Physical sliders and buttons connected via USB provide immediate, tactile control over individual application volumes, mute states, and output device switching without ever leaving your current task.
+**Our Solution:** Physical sliders and buttons connected via direct USB serial provide immediate hardware control over individual Windows audio sessions with zero software interaction required.
+
+### Unreliable Feedback on Critical Mute States
+Accidentally leaving a microphone unmuted during private conversations or forgetting to unmute before speaking are common pain points. Software indicators are easily missed when focused on other tasks.
+
+**Our Solution:** Hardware LEDs directly linked to Windows Core Audio mute states provide always-visible confirmation of mic and output mute status, synchronized in real-time with the backend.
+
+### Output Device Switching Requires Multiple Clicks
+Streamers frequently switch between monitoring devices (headphones for gaming, speakers for editing). Windows requires opening Sound settings, navigating to Playback devices, and selecting the target device.
+
+**Our Solution:** Single button press toggles between configured output devices with LED confirmation of the active device, all controlled through Windows Core Audio API.
 
 ## Differentiators
 
-### Direct USB Serial Communication
-Unlike the original deej (serial-only) or other forks (network-based), this fork migrates to **USB serial with bidirectional communication**. This provides LED feedback for mute states and device selection while maintaining the simplicity of a direct USB connection - eliminating network configuration complexity.
+### Serial-First Architecture
+Unlike the original deej (serial-only, no feedback) or network-based forks (WiFi/UDP complexity), this implementation is designed from the ground up for **USB serial communication at 115200 baud**. The hardware is already connected via USB for power - using WiFi adds unnecessary network configuration, latency, and failure modes. Serial-first design provides:
+- Zero-configuration connectivity (auto-detected COM port)
+- Sub-50ms latency for volume changes
+- Bidirectional communication for LED state synchronization
+- No network dependencies or firewall issues
 
-This results in a more reliable connection, visual feedback on hardware state, and simplified setup for users who already have their ESP32 connected via USB for power.
+This results in plug-and-play simplicity with professional-grade reliability.
 
-### True Mute Functionality
-Unlike solutions that simply set volume to 0%, deej implements **Windows Core Audio muting** - the same behavior as the system mute button. This prevents audio from playing entirely and provides proper visual feedback in Windows audio controls.
+### True Windows Core Audio Integration
+Unlike volume-to-zero workarounds, deej implements **Windows Core Audio Session API muting** - the same API used by Windows itself. This provides:
+- Proper mute state synchronization across all Windows audio interfaces
+- Automatic mute when sliders reach zero (with backend confirmation)
+- Visual feedback in Windows volume mixer showing "Muted" status
+- Session-aware mute control (separate mute states for speakers vs headphones)
 
-### Physical Output Device Switching
-Instead of navigating Windows sound settings, a single button press toggles between configured audio devices (headphones, speakers, etc.). This is especially valuable for streamers who switch between monitoring devices or gamers alternating between headset and speakers.
+This results in predictable behavior that matches user expectations from Windows native controls.
+
+### Hardware State Synchronization
+Unlike one-way controllers that can desynchronize from actual system state, deej implements **bidirectional serial protocol** where:
+- ESP32 sends input changes to PC
+- PC backend sends actual state back to ESP32
+- LEDs update only after backend confirmation
+- State stays synchronized even if backend operations fail or timeout
+
+This results in LEDs that always reflect true Windows audio state, preventing confusion from desynchronized hardware indicators.
 
 ## Key Features
 
 ### Core Features
-- **5 Analog Sliders:** Independent volume control for any Windows audio session - control individual apps (Discord, Chrome, games) or system targets (master, mic, system sounds, currently active app)
-- **USB Serial Communication:** Direct USB connection at 115200 baud with auto-detection of COM port, providing reliable communication without network configuration
-- **Bidirectional LED Feedback:** Real-time visual indication of mute states and active output device through hardware LEDs
+- **5 Analog Sliders:** Smooth 12-bit ADC volume control (0-4095 range) for individual Windows audio sessions - map to specific applications (Discord, Spotify, games) or output devices (speakers, headphones)
+- **USB Serial Communication:** Direct 115200 baud connection with auto-COM-port detection, providing reliable sub-50ms latency without network configuration
+- **Auto-Mute on Zero:** When slider reaches 0, automatically triggers Windows Core Audio mute (not just 0% volume) with backend confirmation
 
 ### Control Features
-- **2 Mute Buttons:** True Windows Core Audio muting (not volume=0) for quick audio cutoff with proper system integration
-- **Output Device Toggle:** One-button switching between configured audio output devices (headphones, speakers, etc.)
-- **Flexible Mapping:** YAML-based configuration maps sliders/buttons to specific apps, audio devices, or system targets
+- **Master Mute Button:** Mutes current active output device (speakers OR headphones depending on active session) with LED indicating mute state of active session only
+- **Mic Mute Button:** Mutes microphone input device with dedicated LED indicator
+- **Output Device Toggle:** One-button switching between configured audio devices (speakers/headphones) with dual LEDs showing active device - includes long-press ESP32 reset
 
 ### Advanced Features
-- **Smart Session Targeting:** Control unmapped apps collectively, target currently active window audio, or bind to specific hardware devices by name
-- **ESP32-Based Controller:** Hardware built on affordable ESP32/ESP8266 microcontrollers programmed via Arduino framework
-- **Windows Core Audio Integration:** Deep integration with Windows WCA API for professional-grade audio control and session management
+- **Session-Aware Mute States:** Each output device (session 0 = speakers, session 1 = headphones) maintains independent mute state - switching devices shows correct LED for newly active device
+- **Bidirectional State Sync:** PC backend sends actual mute states and active device index back to ESP32 for LED updates, ensuring hardware always reflects true Windows state
+- **Flexible YAML Mapping:** Configure slider-to-application bindings, mute button targets, and output device names through simple YAML config with hot-reload support

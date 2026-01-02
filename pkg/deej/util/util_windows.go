@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -383,6 +384,10 @@ func GetDeviceIDByNameWinAPI(deviceName string) (string, error) {
 	if deviceName == "" {
 		return "", errors.New("deviceName cannot be empty")
 	}
+
+	// Lock this goroutine to the current OS thread for COM operations
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 
 	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED); err != nil {
 		return "", fmt.Errorf("failed to initialize COM library: %w", err)

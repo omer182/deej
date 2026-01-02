@@ -9,14 +9,12 @@
 slider_mapping:
   0: "Speakers (Realtek High Definition Audio)"
   1: "Headphones (HyperX Cloud III Wireless)"
-  2:
-    - cod.exe
-    - cs2.exe
-  3: spotify.exe
-  4: deej.unmapped
+  2: discord.exe
+  3: deej.unmapped
+  4: spotify.exe
 
 mute_button_mapping:
-  0: master
+  0: ["Speakers (Realtek High Definition Audio)", "Headphones (HyperX Cloud III Wireless)"]
   1: mic
 
 available_output_device:
@@ -35,6 +33,6 @@ noise_reduction: default
 # or set to a specific port like "COM4" if you know which port your device is on
 # baud_rate should match your ESP32 firmware settings (standard is 115200)
 serial_connection_info:
-  com_port: "COM11"  # The OTHER port in the pair
+  com_port: "COM5"  # ESP32 serial port
   # or use "auto" to let deej find it
   baud_rate: 115200
