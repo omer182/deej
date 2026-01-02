@@ -1,4 +1,4 @@
-name: Manual Release
+name: Release
 
 on:
   workflow_dispatch:
@@ -13,32 +13,8 @@ on:
         default: ''
 
 jobs:
-  build:
-    name: Build
-    runs-on: windows-latest
-
-    steps:
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: "1.23.3"
-
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Build deej (Windows)
-        run: pkg/deej/scripts/windows/build-release.bat
-        shell: cmd
-
-      - name: Archive Windows build
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-build
-          path: deej-release.exe
-
   release:
     name: Create Release
-    needs: build
     runs-on: ubuntu-latest
 
     steps:
@@ -71,11 +47,15 @@ jobs:
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "Creating release: $NEW_VERSION"
 
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
+      - name: Download latest master build
+        uses: dawidd6/action-download-artifact@v2
         with:
-          name: windows-build
+          workflow: main.yml
+          branch: master
+          name: windows-build-master
           path: ./artifacts
+          check_artifacts: true
+          search_artifacts: true
 
       - name: Prepare release notes
         id: release_notes
