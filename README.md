@@ -1,4 +1,4 @@
-This is a cloned fork of the Deej project (https://github.com/omriharel/deej); and specifically, iamjackg's fork that added UDP support (https://github.com/iamjackg/deej).
+This is a cloned fork of the Deej project (https://github.com/omriharel/deej);
 
 The main significant changes in this fork, from the original Deej project:
 1. **USB Serial communication** (migrated from UDP to USB Serial for improved reliability and latency)
