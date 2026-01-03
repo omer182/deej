@@ -95,8 +95,8 @@ void loop() {
   static int last_sent_slider_values[5] = {-1, -1, -1, -1, -1};
   static bool previous_auto_mute_state[2] = {false, false};  // Track previous mute state for sliders 0 and 1
   static bool waitingForConnection = true;  // Connection state indicator
-  const int SLIDER_CHANGE_THRESHOLD = 50;  // Only send after 50+ units change
-  const int MUTE_THRESHOLD = 400;  // Below this value = muted
+  const int SLIDER_CHANGE_THRESHOLD = 20;  // Only send after 20+ units change (~0.5% steps)
+  const int MUTE_THRESHOLD = 100;  // Below this value = muted (matches ZERO_THRESHOLD)
 
   // PRIORITY 0: Connection status indication
   // While waiting for backend connection, only blink LED and check for "Connected" message

@@ -10,7 +10,7 @@ namespace lib {
 namespace input_components {
 namespace {
 // Threshold for treating slider as zero (to avoid jitter at bottom)
-constexpr int ZERO_THRESHOLD = 400;
+constexpr int ZERO_THRESHOLD = 100;
 
 bool valueIsChanged(int new_val, int old_val) {
   // Always detect changes - serial bandwidth is plentiful
