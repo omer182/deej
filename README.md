@@ -1,11 +1,21 @@
-This is a cloned fork of the Deej project (https://github.com/omriharel/deej);
+## About This Fork
 
-The main significant changes in this fork, from the original Deej project:
-1. **USB Serial communication** (migrated from UDP to USB Serial for improved reliability and latency)
-2. Support for mute buttons (ones that actually mute, not just lower the volume to 0)
-3. Support for output device toggle (i.e. toggle between sound devices)
-4. Individual button event protocol (more efficient than array-based updates)
-5. Optimistic UI updates on ESP32 firmware (immediate LED feedback)
+This is a fork of the original [deej project by omriharel](https://github.com/omriharel/deej), with significant enhancements and modernizations. Special thanks to **[tomerhh](https://github.com/tomerhh/deej)** for the initial UDP/network-based fork that inspired many of the improvements in this version.
+
+### Key Changes in This Fork:
+
+1. **USB Serial Communication** - Migrated from UDP to USB Serial for improved reliability, lower latency, and simpler setup
+2. **Hardware Mute Buttons** - True audio muting (not just volume to 0%) with LED feedback
+3. **Output Device Switching** - Toggle between audio devices (speakers/headphones) with a button
+4. **Individual Button Events** - More efficient protocol with per-button messages instead of array updates
+5. **Optimistic UI Updates** - Immediate LED feedback on ESP32 before PC confirmation
+6. **Connection Status Indicator** - Blinking LED shows when waiting for PC connection
+7. **Auto-Mute on Zero** - Automatically mute when slider reaches bottom position
+
+**Acknowledgments:**
+- Original deej concept and implementation: [omriharel](https://github.com/omriharel)
+- UDP/network fork foundation: [tomerhh](https://github.com/tomerhh/deej)
+- USB Serial migration and enhancements: This fork
 
 # deej (with USB Serial support)
 
