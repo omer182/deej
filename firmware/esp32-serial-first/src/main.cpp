@@ -63,14 +63,9 @@ void setup() {
 
   serial_api = new SerialApi();
 
-  // Visually indicate that the system is ready.
-  util::sequentialLEDOn(MUTE_BUTTON_0_LED_PIN, MUTE_BUTTON_1_LED_PIN,
-                        AUDIO_DEVICE_SELECTOR_BUTTON_DEV_1_LED_PIN, 300);
-
-  // Initialize state and sync with backend
-  // 1. Set default output device to speakers (device 0)
-  audio_device_selector->setActiveDevice(0);
-  serial_api->sendSwitchOutput(0);  // Notify backend of initial device
+  // // Visually indicate that the system is ready.
+  // util::sequentialLEDOn(MUTE_BUTTON_0_LED_PIN, MUTE_BUTTON_1_LED_PIN,
+  //                       AUDIO_DEVICE_SELECTOR_BUTTON_DEV_1_LED_PIN, 300);
 
   // 2. Send initial slider values to sync backend
   std::string initial_sliders = "Sliders";
@@ -99,10 +94,40 @@ void setup() {
 void loop() {
   static int last_sent_slider_values[5] = {-1, -1, -1, -1, -1};
   static bool previous_auto_mute_state[2] = {false, false};  // Track previous mute state for sliders 0 and 1
+  static bool waitingForConnection = true;  // Connection state indicator
   const int SLIDER_CHANGE_THRESHOLD = 50;  // Only send after 50+ units change
   const int MUTE_THRESHOLD = 400;  // Below this value = muted
 
-  // PRIORITY 0: Check for unsolicited messages from backend (e.g., "Connected")
+  // PRIORITY 0: Connection status indication
+  // While waiting for backend connection, only blink LED and check for "Connected" message
+  if (waitingForConnection) {
+    // Blink MUTE_BUTTON_0 LED every 500ms (using millis to avoid blocking)
+    digitalWrite(MUTE_BUTTON_0_LED_PIN, (millis() / 500) % 2 ? HIGH : LOW);
+
+    // Check for "Connected" message
+    if (Serial.available()) {
+      String incoming = Serial.readStringUntil('\n');
+      incoming.trim();
+
+      if (incoming == "Connected") {
+        // Backend connected - stop blinking and show connection sequence
+        waitingForConnection = false;
+        digitalWrite(MUTE_BUTTON_0_LED_PIN, LOW);  // Turn off blink LED
+        util::sequentialLEDOn(MUTE_BUTTON_0_LED_PIN, MUTE_BUTTON_1_LED_PIN,
+                              AUDIO_DEVICE_SELECTOR_BUTTON_DEV_1_LED_PIN, 300);
+                                // Initialize state and sync with backend
+        // 1. Set default output device to speakers (device 0)
+        audio_device_selector->setActiveDevice(0);
+        serial_api->sendSwitchOutput(0);  // Notify backend of initial device
+      }
+    }
+
+    // Skip all normal processing while waiting for connection
+    delay(50);
+    return;
+  }
+
+  // Check for unsolicited messages from backend (e.g., "Connected")
   // NOTE: This consumes the message from the serial buffer. In the current design,
   // "Connected" is the only unsolicited message and is sent right at startup before
   // any request/response exchanges happen, so there's no conflict with SerialApi.
@@ -110,13 +135,7 @@ void loop() {
   if (Serial.available()) {
     String incoming = Serial.readStringUntil('\n');
     incoming.trim();
-
-    if (incoming == "Connected") {
-      // Backend just connected - show visual indication
-      util::sequentialLEDOn(MUTE_BUTTON_0_LED_PIN, MUTE_BUTTON_1_LED_PIN,
-                            AUDIO_DEVICE_SELECTOR_BUTTON_DEV_1_LED_PIN, 300);
-    }
-    // Ignore unknown messages (could be noise or future protocol extensions)
+    // Ignore any other unsolicited messages during normal operation
   }
 
   // PRIORITY 1: Check mute buttons FIRST (most critical for user responsiveness)
